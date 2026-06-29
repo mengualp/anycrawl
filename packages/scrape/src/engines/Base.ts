@@ -26,8 +26,14 @@ import { getResolvedProxyModeName } from "../managers/Proxy.js";
 import { ensureChallengeState, consumeProxyAction } from "../challenges/ChallengeContext.js";
 import { ProxyCacheManager } from "../managers/ProxyCacheManager.js";
 import { smartWaitForDOMStable } from "../utils/smartWait.js";
+import { CLOAKBROWSER_RUNTIME } from "../core/CloakBrowserLauncher.js";
 
 // Template system imports - directly use @anycrawl/template-client
+
+const getBrowserRuntimeForCache = (engine?: string): string | undefined =>
+    engine === ConfigurableEngineType.PLAYWRIGHT || engine === ConfigurableEngineType.PUPPETEER
+        ? CLOAKBROWSER_RUNTIME
+        : undefined;
 
 // Re-export core types for backward compatibility
 export type { MetadataEntry, BaseContent } from "../core/DataExtractor.js";
@@ -1219,25 +1225,28 @@ export abstract class BaseEngine {
                                 }
                             }
 
+                            const cacheKeyOptions = {
+                                url: context.request.url,
+                                formats: options.formats,
+                                json_options: options.json_options,
+                                include_tags: options.include_tags,
+                                exclude_tags: options.exclude_tags,
+                                proxy: originalProxy,
+                                only_main_content: options.only_main_content,
+                                extract_source: options.extract_source,
+                                ocr_options: options.ocr_options,
+                                wait_for: options.wait_for,
+                                wait_until: options.wait_until,
+                                wait_for_selector: options.wait_for_selector,
+                                template_id: options.template_id,
+                                store_in_cache: options.store_in_cache,
+                                engine: (context.request.userData as any).engine,
+                                browser_runtime: getBrowserRuntimeForCache((context.request.userData as any).engine),
+                            };
+
                             await CacheManager.getInstance().saveToCache(
                                 context.request.url,
-                                {
-                                    url: context.request.url,
-                                    formats: options.formats,
-                                    json_options: options.json_options,
-                                    include_tags: options.include_tags,
-                                    exclude_tags: options.exclude_tags,
-                                    proxy: originalProxy,
-                                    only_main_content: options.only_main_content,
-                                    extract_source: options.extract_source,
-                                    ocr_options: options.ocr_options,
-                                    wait_for: options.wait_for,
-                                    wait_until: options.wait_until,
-                                    wait_for_selector: options.wait_for_selector,
-                                    template_id: options.template_id,
-                                    store_in_cache: options.store_in_cache,
-                                    engine: (context.request.userData as any).engine,
-                                },
+                                cacheKeyOptions as any,
                                 { url: context.request.url, ...data },
                                 {
                                     statusCode: status.statusCode,

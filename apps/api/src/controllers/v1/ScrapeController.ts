@@ -9,6 +9,9 @@ import { validateTemplateOnlyFields } from "../../utils/templateValidator.js";
 import { renderUrlTemplate } from "../../utils/urlTemplate.js";
 import { triggerWebhookEvent } from "../../utils/webhookHelper.js";
 import { randomUUID } from "crypto";
+
+const getBrowserRuntimeForCache = (engine?: string | null): string | undefined =>
+    engine === "playwright" || engine === "puppeteer" ? "cloakbrowser" : undefined;
 export class ScrapeController {
     private resolveWaitTimeoutMs(jobPayload: any, hasExplicitTimeout: boolean): number {
         const options = (jobPayload?.options || {}) as Record<string, any>;
@@ -121,6 +124,7 @@ export class ScrapeController {
                         {
                             url: jobPayload.url,
                             engine: engineName!,
+                            browser_runtime: getBrowserRuntimeForCache(engineName),
                             formats: jobPayload.options.formats,
                             json_options: jobPayload.options.json_options,
                             include_tags: jobPayload.options.include_tags,

@@ -1,6 +1,10 @@
 import { RequestQueueV2, LaunchContext } from "crawlee";
 import { config } from "@anycrawl/libs";
 import type { EngineOptions } from "../types/engine.js";
+import {
+    getCloakBrowserPlaywrightLauncher,
+    getCloakBrowserPuppeteerLauncher,
+} from "../core/CloakBrowserLauncher.js";
 
 // Use type-only reference to avoid runtime import of Base and engines
 export type Engine = import("./Base.js").BaseEngine;
@@ -75,6 +79,7 @@ const defaultLaunchContext: Partial<LaunchContext> = {
         },
         ignoreHTTPSErrors: config.engine.ignoreSSLError,
     },
+    useIncognitoPages: config.engine.browserIsolateContexts,
     ...(config.engine.userAgent ? {
         userAgent: config.engine.userAgent
     } : {}),
@@ -84,7 +89,7 @@ const defaultHttpOptions: Record<string, any> = {
     ignoreSslErrors: config.engine.ignoreSSLError,
 };
 
-function mergeLaunchContexts(
+export function mergeLaunchContexts(
     baseLaunchContext: EngineOptions["launchContext"] | undefined,
     overrideLaunchContext: EngineOptions["launchContext"] | undefined
 ): EngineOptions["launchContext"] | undefined {
@@ -102,6 +107,7 @@ function mergeLaunchContexts(
             ...(overrideLaunchContext?.launchOptions || {}),
             ...(mergedArgs.length > 0 ? { args: mergedArgs } : {}),
         },
+        ...(baseLaunchContext?.launcher ? { launcher: baseLaunchContext.launcher } : {}),
     };
 }
 
@@ -124,7 +130,7 @@ abstract class BaseEngineFactory implements IEngineFactory {
         const mod = await import(this.engineModule);
         const EngineClass = mod[this.engineClass];
         const proxyConfiguration = await getProxyConfiguration();
-        const engineSpecificOptions = this.getEngineSpecificOptions();
+        const engineSpecificOptions = await this.getEngineSpecificOptions();
         const mergedLaunchContext = mergeLaunchContexts(
             engineSpecificOptions.launchContext as EngineOptions["launchContext"] | undefined,
             options?.launchContext
@@ -140,7 +146,7 @@ abstract class BaseEngineFactory implements IEngineFactory {
         });
     }
 
-    protected abstract getEngineSpecificOptions(): Record<string, any>;
+    protected abstract getEngineSpecificOptions(): Record<string, any> | Promise<Record<string, any>>;
 }
 
 // Concrete factory implementations
@@ -160,9 +166,13 @@ export class PlaywrightEngineFactory extends BaseEngineFactory {
     protected engineModule = "./Playwright.js";
     protected engineClass = "PlaywrightEngine";
 
-    protected getEngineSpecificOptions(): Record<string, any> {
+    protected async getEngineSpecificOptions(): Promise<Record<string, any>> {
+        const launcher = await getCloakBrowserPlaywrightLauncher();
         return {
-            launchContext: defaultLaunchContext,
+            launchContext: {
+                ...defaultLaunchContext,
+                launcher,
+            },
         };
     }
 }
@@ -171,9 +181,13 @@ export class PuppeteerEngineFactory extends BaseEngineFactory {
     protected engineModule = "./Puppeteer.js";
     protected engineClass = "PuppeteerEngine";
 
-    protected getEngineSpecificOptions(): Record<string, any> {
+    protected async getEngineSpecificOptions(): Promise<Record<string, any>> {
+        const launcher = await getCloakBrowserPuppeteerLauncher();
         return {
-            launchContext: defaultLaunchContext,
+            launchContext: {
+                ...defaultLaunchContext,
+                launcher,
+            },
         };
     }
 }

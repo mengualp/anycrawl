@@ -187,8 +187,7 @@ export class ScreenshotTransformer {
             if (process.env.ANYCRAWL_STORAGE === 's3') {
                 await this.s3.uploadImage(fileName!, screenshot);
             } else {
-                const keyValueStore = await Utils.getInstance().getKeyValueStore();
-                await keyValueStore.setValue(fileName!, screenshot, { contentType: 'image/jpeg' });
+                await Utils.getInstance().writePublicFile(fileName!, screenshot);
             }
             log.info(`[Screenshot] Saved screenshot: ${fileName} for URL: ${context.request.url}`);
             return fileName;

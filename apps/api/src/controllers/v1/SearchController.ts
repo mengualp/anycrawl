@@ -12,6 +12,10 @@ import { mergeOptionsWithTemplate } from "../../utils/optionMerger.js";
 import { DomainValidator } from "@anycrawl/template-client";
 import { renderTextTemplate } from "../../utils/urlTemplate.js";
 import { triggerWebhookEvent } from "../../utils/webhookHelper.js";
+
+const getBrowserRuntimeForCache = (engine?: string | null): string | undefined =>
+    engine === "playwright" || engine === "puppeteer" ? "cloakbrowser" : undefined;
+
 export class SearchController {
     private searchService: SearchService;
 
@@ -233,6 +237,7 @@ export class SearchController {
                                 !scrapeOptions.template_id;
                             const cacheOptions = {
                                 engine: engineForScrape,
+                                browser_runtime: getBrowserRuntimeForCache(engineForScrape),
                                 formats: scrapeOptions.formats,
                                 json_options: scrapeOptions.json_options,
                                 include_tags: scrapeOptions.include_tags,
